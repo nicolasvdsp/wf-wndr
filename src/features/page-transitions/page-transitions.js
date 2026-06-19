@@ -1,3 +1,5 @@
+import { PRELOADER_ENABLED } from '../../config';
+
 function initPageTransitions() {
   // ------------------------------------------
   // BARBA PAGE TRANSITION BOILERPLATE, by osmo
@@ -393,6 +395,28 @@ function initPageTransitions() {
     }, null, 0);
 
     return loadTimeline;
+  }
+
+  function skipPreloader(next) {
+    const wrap = document.querySelector("[data-load-wrap]");
+    if (wrap) {
+      const resetTargets = Array.from(
+        wrap.querySelectorAll('[data-load-reset]:not([data-load-text])')
+      );
+      if (resetTargets.length) {
+        gsap.set(resetTargets, { autoAlpha: 1 });
+      }
+      gsap.set(wrap, { display: "none" });
+    }
+
+    dispatchPageVisible(next);
+    resetPage(next);
+    return Promise.resolve();
+  }
+
+  function runPreloader(next) {
+    if (!PRELOADER_ENABLED) return skipPreloader(next);
+    return runLogoPreloaderFast(next);
   }
 
   function runPageEnterSelf(next) {
@@ -818,7 +842,7 @@ function initPageTransitions() {
         async once(data) {
           initOnceFunctions();
 
-          return runLogoPreloaderFast(data.next.container);
+          return runPreloader(data.next.container);
         },
 
         // Current page leaves
@@ -840,7 +864,7 @@ function initPageTransitions() {
         async once(data) {
           initOnceFunctions();
 
-          return runLogoPreloaderFast(data.next.container);
+          return runPreloader(data.next.container);
         },
 
         // Current page leaves
@@ -862,7 +886,7 @@ function initPageTransitions() {
         async once(data) {
           initOnceFunctions();
 
-          return runLogoPreloaderFast(data.next.container);
+          return runPreloader(data.next.container);
         },
 
         // Current page leaves

@@ -3,6 +3,10 @@
  * Set to true to enable a feature, false to disable it
  * Only enabled features will be loaded and initialized
  */
+
+/** Logo preloader on first page load (part of page transitions) */
+export const PRELOADER_ENABLED = false;
+
 export const INCLUDE_FEATURES = {
   animations: false,
   scrollBehaviour: true,
