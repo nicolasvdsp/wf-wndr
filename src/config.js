@@ -8,7 +8,7 @@
 export const PRELOADER_ENABLED = false;
 
 export const INCLUDE_FEATURES = {
-  animations: false,
+  animations: true,
   scrollBehaviour: true,
 
   pageTransitions: true,
