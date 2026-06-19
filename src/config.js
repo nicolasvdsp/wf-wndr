@@ -8,8 +8,8 @@ export const INCLUDE_FEATURES = {
   scrollBehaviour: true,
 
   pageTransitions: true,
-  navbar: true,
-  customFeature: true,
+  navbar: false,
+  customFeature: false,
   breakpoints: true,
   utilities: true,
 
@@ -17,10 +17,10 @@ export const INCLUDE_FEATURES = {
   glossary: false,
   textScramble: false,
   textStagger: false,
-  marquee: false,
+  marquee: true,
   radialDivMarquee: false,
   vimeoBackground: false,
-  parallax: false,
+  parallax: true,
   microInteractions: false,
   faq: false,
   vimeoAdvanced: false,
