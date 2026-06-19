@@ -8,7 +8,7 @@ A modern, scalable template for adding custom JavaScript to Webflow projects usi
 
 1. Click **Use this template** on GitHub to create a new repository
 2. `npm install`
-3. Copy `CONTEXT.md.example` → `CONTEXT.md` and fill in your project details
+3. Fill in project details in [`documentation/CONTEXT.md`](documentation/CONTEXT.md)
 4. Configure features in `src/config.js`
 5. Follow the [Webflow Setup Guide](documentation/webflow-setup.md)
 
@@ -40,6 +40,7 @@ A modern, scalable template for adding custom JavaScript to Webflow projects usi
 │   └── scss/                  # Styles
 ├── dist/                      # Build output (main.js + main.min.js)
 ├── documentation/             # Setup guides & reference
+│   ├── CONTEXT.md             # Project dev context (MCP, conventions, workflow)
 │   ├── webflow-setup.md       # Webflow integration guide
 │   └── inline_loader_script.js # Legacy inline loader (reference only)
 ├── vite.config.js             # Vite configuration

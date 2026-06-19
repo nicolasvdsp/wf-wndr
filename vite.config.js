@@ -11,7 +11,7 @@ export default defineConfig({
   plugins: useHttps ? [basicSsl()] : [],
   server: {
     host: 'localhost',
-    port: 3012,
+    port: 3015,
     cors: true,
     https: useHttps,
     hmr: {

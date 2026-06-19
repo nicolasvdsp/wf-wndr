@@ -5,12 +5,12 @@
  * is unreachable.
  *
  * Two opt-in modes (set on the SAME <script> tag as `dev-mode`):
- *   - default                  → http://localhost:3012   (run `npm run dev`)
- *   - `https-mode` attribute   → https://localhost:3012  (run `npm run dev:https`)
+ *   - default                  → http://localhost:3015   (run `npm run dev`)
+ *   - `https-mode` attribute   → https://localhost:3015  (run `npm run dev:https`)
  *
  * Use `https-mode` when you need to load this bundle into an https://*.webflow.io
  * page (Safari blocks `http://` script tags as mixed content). The first load of
- * `https://localhost:3012` requires accepting the self-signed certificate once
+ * `https://localhost:3015` requires accepting the self-signed certificate once
  * in the browser. With `http-mode` (default) no certificate dance is needed.
  *
  * On production (custom domain): runs the bundled code immediately.
@@ -24,7 +24,7 @@
  *   <script src="main.min.js" dev-mode https-mode></script>   // HTTPS localhost
  */
 
-const DEV_PORT = 3012;
+const DEV_PORT = 3015;
 const DEV_MESSAGE = '🚧 Dev Mode activated';
 const LIVE_MESSAGE = '🛸 Hi there explorer! You have stumbeled upon the mothership. Lookinging for secretes?';
 

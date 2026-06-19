@@ -1,20 +1,29 @@
-# Project — Dev Context
+# WNDR — Dev Context
 
-Copy this file to `CONTEXT.md` and fill in your project-specific values.
-Use it at the start of a new chat to skip project discovery and jump straight into building.
+Project-specific values for AI-assisted development. Reference this at the start of new chats.
 
 ---
 
 ## Project Overview
 
-[Your client] marketing website built in **Webflow**, with a custom JS/SCSS layer on top for interactions and animations. The Webflow MCP bridge and Figma MCP are used together to build components.
+**WNDR Creative Studio** marketing website built in **Webflow**, with a custom JS/SCSS layer on top for interactions and animations. The Webflow MCP bridge and Figma MCP are used together to build components.
+
+---
+
+## Workflow
+
+- **Scope per chat**: One feature/component per chat — do not start building unless explicitly asked.
+- **Chat naming**: `[type]-[subject]` (e.g. `component-faq`, `component-navbar`). Type is usually `component`.
+- **Feature flags**: Keep the default stack enabled (`pageTransitions`, `navbar`, `scrollBehaviour`, `breakpoints`, `utilities`, `customFeature` — see `src/config.js`). Enable additional template features only when a chat requires them.
+- **Webflow MCP**: Only use when explicitly requested — do not push to Designer proactively.
+- **Dev mode**: `main.min.js` with `dev-mode` is already in Webflow custom code. Netlify: `https://wf-wndr.netlify.app`
 
 ---
 
 ## Tools & MCPs
 
-- **Webflow MCP bridge**: Must be open with the Webflow Designer tab active and in the foreground (not idle/backgrounded). Webflow site ID: `YOUR-WEBFLOW-SITE-ID`
-- **Figma MCP**: File is "[Your project] - Website". Use `get_design_context` + `get_screenshot` together. Dev notes for sections are placed next to frames in Figma.
+- **Webflow MCP bridge**: Use **only when explicitly requested**. When needed: Designer tab must be open, active, and in the foreground. Webflow site: `wndr-creative-studio`
+- **Figma MCP**: File is **260427 WNDR Site**. Use `get_design_context` + `get_screenshot` together. Dev notes for sections are placed next to frames in Figma.
 - **No CSS shorthand** in Webflow style calls — always use longhand (`margin-top`, `padding-left`, etc.)
 - Reuse existing Webflow variables and styles wherever logical. Only create new ones when truly necessary.
 
@@ -37,16 +46,16 @@ The Webflow `<script>` carries the protocol opt-in:
 
 ```html
 <!-- HTTP localhost (default) -->
-<script defer src="https://YOUR-PROJECT.netlify.app/main.min.js" dev-mode></script>
+<script defer src="https://wf-wndr.netlify.app/main.min.js" dev-mode></script>
 
 <!-- HTTPS localhost (use when staging is HTTPS + Safari blocks mixed content) -->
-<script defer src="https://YOUR-PROJECT.netlify.app/main.min.js" dev-mode https-mode></script>
+<script defer src="https://wf-wndr.netlify.app/main.min.js" dev-mode https-mode></script>
 ```
 
 Run the matching Vite command:
 
-- `npm run dev` → `http://localhost:3012` (no certificate prompts)
-- `npm run dev:https` → `https://localhost:3012` (accept the self-signed cert in the browser once: open `https://localhost:3012` directly, click through, then reload Webflow)
+- `npm run dev` → `http://localhost:3015` (no certificate prompts)
+- `npm run dev:https` → `https://localhost:3015` (accept the self-signed cert in the browser once: open `https://localhost:3015` directly, click through, then reload Webflow)
 
 Browsers reject `fetch()` to self-signed `https://localhost` with no trust prompt, so the loader uses `<script type="module">` injection (which uses the same TLS stack as normal Vite loads) — that path works in both modes.
 
