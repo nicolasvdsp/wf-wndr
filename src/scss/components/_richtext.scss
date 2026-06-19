@@ -1,0 +1,298 @@
+// ============================================
+// PRODUCT FEATURES — Rich Text Layout
+// ============================================
+// Rich Text structure per feature: h2, p, ul, figure (repeating)
+// JS (richtext-features.js) wraps each group into:
+//   .feature-rtb_item > .feature-rtb_content + figure
+// Step numbers are generated via CSS counter.
+
+$feature-border: 1px solid #d3d7df;
+$feature-blue: #0138ff;
+$feature-blue-muted: #ccd7ff;
+$feature-black: #0d0d0d;
+$feature-black-muted: #454a5e;
+
+$feature-checkmark: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13.3339 4L6.00052 11.3333L2.66719 8' stroke='%230138FF' stroke-width='1.33333' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+// Container
+.feature-rtb {
+  counter-reset: feature-step;
+
+  &::before,
+  &::after {
+    display: none;
+  }
+}
+
+// Single feature row
+.feature-rtb_item {
+  counter-increment: feature-step;
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  padding-left: 48px;
+  border-bottom: $feature-border;
+}
+
+// Left: text content
+.feature-rtb_content {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: column;
+  padding: 48px 0;
+
+  // Step number badge (01, 02, 03…)
+  &::before {
+    content: counter(feature-step, decimal-leading-zero);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid $feature-blue-muted;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    background: linear-gradient(254deg,
+        $feature-blue 7.7%,
+        rgba($feature-blue, 0.4) 91.2%,
+        rgba($feature-blue, 0.2) 102.2%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 40px;
+  }
+
+  li {
+
+    &::before {
+      content: '';
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      background: $feature-checkmark no-repeat center / contain;
+    }
+  }
+}
+
+// Right: image area
+.feature-rtb_item figure {
+  flex: 1 1 0%;
+  align-self: stretch;
+  border-left: $feature-border;
+  margin: 0 !important;
+  background:
+    linear-gradient(257deg, rgba($feature-blue, 0.008) 0%, rgba($feature-blue, 0.03) 100%),
+    #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  >div {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+// ============================================
+// ORDERED LIST — badge-style numbered list
+// ============================================
+// Webflow class: section_ordered-list
+// Rich Text contains an <ol> with numbered items.
+// CSS hides default numbering and generates badge-style counters.
+
+.feature-rtb ol {
+  counter-reset: ol-step;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 40px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    counter-increment: ol-step;
+    font-size: 1rem;
+    line-height: 32px;
+    color: $feature-black;
+
+    &::before {
+      content: counter(ol-step, decimal-leading-zero);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      margin-right: 16px;
+      vertical-align: middle;
+      border: 1px solid $feature-blue-muted;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      background: linear-gradient(
+        254deg,
+        $feature-blue 7.7%,
+        rgba($feature-blue, 0.4) 91.2%,
+        rgba($feature-blue, 0.2) 102.2%
+      );
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .feature-rtb ol {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ============================================
+// FEATURE CARDS — Integration detail pages
+// ============================================
+// Rich Text with data-feature-cards, JS wraps into:
+//   div.cards-list > div.cards-list_item.type-2
+// Card structure (Webflow classes) + checkmarks (custom CSS).
+
+[data-feature-cards]::before,
+[data-feature-cards]::after {
+  display: none !important;
+}
+
+.cards-list_item ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.cards-list_item li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: $feature-black;
+
+  &::before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    background: $feature-checkmark no-repeat center / contain;
+  }
+}
+
+// ============================================
+// Tablet
+// ============================================
+@media (max-width: 991px) {
+  .feature-rtb_item {
+    gap: 32px;
+    padding-left: 32px;
+  }
+
+  .feature-rtb_content {
+    &::before {
+      margin-bottom: 32px;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+    }
+
+    ul {
+      margin-top: 32px;
+    }
+  }
+
+  .feature-rtb_item figure {
+    flex: 1 1 0%;
+  }
+}
+
+// ============================================
+// Mobile
+// ============================================
+@media (max-width: 767px) {
+  .feature-rtb_item {
+    flex-direction: column;
+    gap: 0;
+    padding: 0 24px;
+    align-items: stretch;
+  }
+
+  .feature-rtb_content {
+    padding: 40px 0 32px;
+
+    &::before {
+      margin-bottom: 24px;
+    }
+
+    ul {
+      margin-top: 24px;
+      flex-direction: column;
+    }
+  }
+
+  .feature-rtb_item figure {
+    width: 100%;
+    max-width: none;
+    border-left: none;
+    border-top: $feature-border;
+    aspect-ratio: 16 / 9;
+    border-radius: 0;
+  }
+}
+
+// ============================================
+// RTB preset — generic rich text (Webflow combo class `rtb-preset`)
+// Mirror of webflow/rtb-preset-custom-code.css for repo parity.
+// ============================================
+
+.rtb-preset {
+  &::before,
+  &::after {
+    display: none;
+  }
+
+  ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  ul li {
+    font-size: 1rem;
+    line-height: 1.4;
+    color: $feature-black;
+  }
+
+  ul li::before {
+    content: '';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    vertical-align: middle;
+    background: $feature-checkmark no-repeat center / contain;
+  }
+}

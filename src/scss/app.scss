@@ -1,0 +1,60 @@
+@use 'components/animations';
+@use 'components/lottie';
+@use 'components/breakpoints';
+@use 'components/touchdevice';
+@use 'components/testimonials';
+// @use 'components/richtext'; // moved to Webflow custom code
+// @use 'components/cta'; // moved to Webflow custom code
+
+//to be added to custom code in webflow:
+
+[data-is-list-filtering] {
+  transition: opacity 0.5s cubic-bezier(0.625, 0.05, 0, 1), transform 0.5s cubic-bezier(0.625, 0.05, 0, 1);
+}
+
+.filter_dropdown.w--open {
+  border-color: var(--border-color--border-alternate);
+}
+
+.filter_filters-dropdown-wrapper .w-dropdown-list {
+  display: block !important;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-0.5rem);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s 0.2s;
+
+  &.w--open {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.3s ease, transform 0.3s ease, visibility 0s 0s;
+  }
+}
+
+.filter_filters-dropdown-wrapper .w-dropdown-toggle>.icon-1x1-small {
+  transition: transform 0.3s ease;
+}
+
+.filter_filters-dropdown-wrapper .w-dropdown-toggle.w--open>.icon-1x1-small {
+  transform: rotate(180deg);
+}
+
+
+//figure
+.entry-detail_content .w-richtext figure.w-richtext-figure-type-image>div {
+  display: block;
+  aspect-ratio: 762 / 450;
+  overflow: hidden;
+  border-radius: 1rem;
+}
+
+.entry-detail_content .w-richtext figure img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.entry-detail_content .w-richtext figure {
+  max-width: unset;
+  width: 100%;
+}
