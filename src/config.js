@@ -36,4 +36,5 @@ export const INCLUDE_FEATURES = {
   bunnyLightbox: false,
   hubspot: false,
   pushmotionMarquee: false,
+  previewList: true,
 }

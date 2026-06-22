@@ -27,6 +27,7 @@ import bunnyBackground from './features/videos/bunny-background';
 import bunnyLightbox from './features/videos/bunny-lightbox';
 import hubspot from './features/hubspot';
 import pushmotionMarquee from './features/pushmotion-marquee';
+import previewList from './features/preview-list';
 
 // ============================================
 // START
@@ -65,6 +66,7 @@ function runApp() {
     ACTIVE_FEATURES.bunnyLightbox && bunnyLightbox();
     ACTIVE_FEATURES.hubspot && hubspot();
     ACTIVE_FEATURES.pushmotionMarquee && pushmotionMarquee();
+    ACTIVE_FEATURES.previewList && previewList();
   }
 
   if (document.readyState === 'loading') {
