@@ -35,18 +35,36 @@ function initMarqueeScrollDirection(container = document) {
   if (!marquees.length) return;
 
   marquees.forEach((marquee) => {
-    if ('marqueeReady' in marquee.dataset) return;
-    marquee.dataset.marqueeReady = '';
-
     const marqueeContent = marquee.querySelector('[data-marquee-collection-target]');
     const marqueeScroll = marquee.querySelector('[data-marquee-scroll-target]');
     if (!marqueeContent || !marqueeScroll) return;
 
-    const { marqueeSpeed: speed, marqueeDirection: direction, marqueeDuplicate: duplicate, marqueeScrollSpeed: scrollSpeed, marqueeIconRotationSpeed: rotationSpeedRaw } = marquee.dataset;
+    // Kill previous tweens if re-initing after afterLeave killed ScrollTriggers
+    if (marquee._mqCleanup) marquee._mqCleanup();
+
+    // Clone only once
+    if (!('marqueeCloned' in marquee.dataset)) {
+      marquee.dataset.marqueeCloned = '';
+
+      const { marqueeDuplicate: duplicate } = marquee.dataset;
+      const duplicateAmount = parseInt(duplicate || 0);
+
+      marqueeScroll.style.marginLeft = `${parseFloat(marquee.dataset.marqueeScrollSpeed) * -1}%`;
+      marqueeScroll.style.width = `${(parseFloat(marquee.dataset.marqueeScrollSpeed) * 2) + 100}%`;
+
+      if (duplicateAmount > 0) {
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < duplicateAmount; i++) {
+          fragment.appendChild(marqueeContent.cloneNode(true));
+        }
+        marqueeScroll.appendChild(fragment);
+      }
+    }
+
+    const { marqueeSpeed: speed, marqueeDirection: direction, marqueeScrollSpeed: scrollSpeed, marqueeIconRotationSpeed: rotationSpeedRaw } = marquee.dataset;
 
     const marqueeSpeedAttr = parseFloat(speed);
     const marqueeDirectionAttr = direction === 'right' ? 1 : -1;
-    const duplicateAmount = parseInt(duplicate || 0);
     const scrollSpeedAttr = parseFloat(scrollSpeed);
     const rotationSpeedAttr = parseFloat(rotationSpeedRaw) || 8;
     const speedMultiplier = window.innerWidth < 479 ? 0.25 : window.innerWidth < 991 ? 0.5 : 1;
@@ -54,19 +72,10 @@ function initMarqueeScrollDirection(container = document) {
     let marqueeSpeed = marqueeSpeedAttr * (marqueeContent.offsetWidth / window.innerWidth) * speedMultiplier;
     let rotationSpeed = rotationSpeedAttr * (marqueeContent.offsetWidth / window.innerWidth) * speedMultiplier;
 
-    marqueeScroll.style.marginLeft = `${scrollSpeedAttr * -1}%`;
-    marqueeScroll.style.width = `${(scrollSpeedAttr * 2) + 100}%`;
-
-    if (duplicateAmount > 0) {
-      const fragment = document.createDocumentFragment();
-      for (let i = 0; i < duplicateAmount; i++) {
-        fragment.appendChild(marqueeContent.cloneNode(true));
-      }
-      marqueeScroll.appendChild(fragment);
-    }
-
     const marqueeItems = marquee.querySelectorAll('[data-marquee-collection-target]');
     const blocks = marquee.querySelectorAll('[data-marquee-icon-target]');
+
+    gsap.set(marqueeItems, { xPercent: 0 });
 
     const animation = gsap.to(marqueeItems, {
       xPercent: -100,
@@ -92,7 +101,7 @@ function initMarqueeScrollDirection(container = document) {
 
     marquee.setAttribute('data-marquee-status', 'normal');
 
-    ScrollTrigger.create({
+    const directionST = ScrollTrigger.create({
       trigger: marquee,
       start: 'top bottom',
       end: 'bottom top',
@@ -106,7 +115,7 @@ function initMarqueeScrollDirection(container = document) {
       }
     });
 
-    const tl = gsap.timeline({
+    const scrubTl = gsap.timeline({
       scrollTrigger: {
         trigger: marquee,
         start: '0% 100%',
@@ -116,9 +125,15 @@ function initMarqueeScrollDirection(container = document) {
     });
 
     const scrollStart = marqueeDirectionAttr === -1 ? scrollSpeedAttr : -scrollSpeedAttr;
-    const scrollEnd = -scrollStart;
+    scrubTl.fromTo(marqueeScroll, { x: `${scrollStart}vw` }, { x: `${-scrollStart}vw`, ease: 'none' });
 
-    tl.fromTo(marqueeScroll, { x: `${scrollStart}vw` }, { x: `${scrollEnd}vw`, ease: 'none' });
+    marquee._mqCleanup = () => {
+      animation.kill();
+      if (blockSpin) blockSpin.kill();
+      directionST.kill();
+      scrubTl.scrollTrigger?.kill();
+      scrubTl.kill();
+    };
   });
 }
 
