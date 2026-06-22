@@ -1,0 +1,74 @@
+/*
+WNDR NAVBAR — only the bits that can't be expressed cleanly in the Webflow UI.
+Everything else (colours, font, base padding, logo size, indicator size/shape)
+should live on the classes inside the Designer.
+
+Two CSS custom properties drive both the CSS and the JS:
+  --nav-indent                → how far links shift LEFT when indented (the
+                                 reserved slot for the indicator on the right)
+  --nav-indicator-edge-offset → distance between the indicator's right edge
+                                 and the alignment line (the right edge of the
+                                 un-indented links). 0 = indicator's right edge
+                                 sits exactly at the alignment line. Increase
+                                 to inset the indicator from the edge.
+
+Defined on `[data-nav]` so the values are always in scope — independent of
+whether the root element is `.nav`, `.nav_component`, or anything else.
+*/
+
+[data-nav] {
+  --nav-indent: 18px;
+  --nav-indicator-edge-offset: 0px;
+}
+
+[data-nav-menu] {
+  // Indicator anchor. The JS measures relative to this element.
+  position: relative;
+}
+
+[data-nav-link] {
+  // Margin-right shifts the link LEFT from the right-alignment edge, opening
+  // the slot on its right where the indicator sits.
+  margin-right: 0;
+  transition: margin-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+// Indented state — applied by the JS on the menu wrapper while hovered/focused.
+// Every link gets the indent so they all sit in the same column.
+// `!important` so the rule wins regardless of any margin set directly on the
+// link in the Webflow Designer.
+[data-nav-menu].is-hover [data-nav-link] {
+  margin-right: var(--nav-indent) !important;
+}
+
+// Webflow's auto class for the current-page link, plus aria-current (set by
+// the JS). Keeps the current link visually indented at all times so the
+// indicator always has a reserved slot to sit in.
+[data-nav-link].w--current,
+[data-nav-link][aria-current="page"] {
+  margin-right: var(--nav-indent) !important;
+}
+
+[data-nav-indicator] {
+  // X is anchored to the menu's right edge via `right` so the indicator stays
+  // pinned to the alignment line, even as nav_menu resizes when links indent
+  // (each link's margin-right grows the menu's content width). JS only
+  // animates Y via `transform: translateY`.
+  //
+  // `position: absolute` is forced so any accidental flow styling in Webflow
+  // (display: block, etc.) doesn't push it into the layout.
+  position: absolute !important;
+  top: 0;
+  left: auto;
+  right: var(--nav-indicator-edge-offset, 0px);
+  opacity: 0; // hidden until JS parks it on the current link
+  visibility: hidden; // paired with opacity for GSAP `autoAlpha`
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-nav-link] {
+    transition: none;
+  }
+}

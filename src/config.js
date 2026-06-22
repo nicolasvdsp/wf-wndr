@@ -12,7 +12,7 @@ export const INCLUDE_FEATURES = {
   scrollBehaviour: true,
 
   pageTransitions: true,
-  navbar: false,
+  navbar: true,
   customFeature: false,
   breakpoints: true,
   utilities: true,
