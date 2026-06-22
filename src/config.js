@@ -20,7 +20,7 @@ export const INCLUDE_FEATURES = {
   // Enable per project as needed
   glossary: false,
   textScramble: false,
-  textStagger: false,
+  textStagger: true,
   marquee: true,
   radialDivMarquee: false,
   vimeoBackground: false,
