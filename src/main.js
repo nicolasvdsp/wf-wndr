@@ -28,6 +28,7 @@ import bunnyLightbox from './features/videos/bunny-lightbox';
 import hubspot from './features/hubspot';
 import pushmotionMarquee from './features/pushmotion-marquee';
 import previewList from './features/preview-list';
+import magneticCursor from './features/magnetic-cursor';
 
 // ============================================
 // START
@@ -67,6 +68,7 @@ function runApp() {
     ACTIVE_FEATURES.hubspot && hubspot();
     ACTIVE_FEATURES.pushmotionMarquee && pushmotionMarquee();
     ACTIVE_FEATURES.previewList && previewList();
+    ACTIVE_FEATURES.magneticCursor && magneticCursor();
   }
 
   if (document.readyState === 'loading') {

@@ -37,4 +37,5 @@ export const INCLUDE_FEATURES = {
   hubspot: false,
   pushmotionMarquee: false,
   previewList: true,
+  magneticCursor: true,
 }
