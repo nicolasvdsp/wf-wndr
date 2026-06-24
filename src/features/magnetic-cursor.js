@@ -84,9 +84,10 @@ function bindMagneticTargets(scope) {
     if (!bgHolder) return;
 
     target.addEventListener('mouseenter', () => {
+      const ease = target.hasAttribute('data-magnetic-cursor-nav') ? 'power3.out' : 'back.out(1)';
       const state = Flip.getState(cursorBgEl);
       bgHolder.appendChild(cursorBgEl);
-      Flip.from(state, { ease: 'back.out(1)', duration: 0.3 });
+      Flip.from(state, { ease, duration: 0.3 });
     });
 
     target.addEventListener('mouseleave', () => {
