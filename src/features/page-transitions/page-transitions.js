@@ -28,7 +28,12 @@ function initPageTransitions() {
   const has = (s) => !!nextPage.querySelector(s);
 
   let staggerDefault = 0.05;
-  let durationDefault = 0.6;
+  let durationDefault = 0.64;
+
+  // Duration of the "exit" phase (text stagger out + wipe out) that plays
+  // on the leaving page before the crossfade. The entering page delays its
+  // fade-in by this amount so the order is: exit out → crossfade → reveal in.
+  const EXIT_PHASE = .7;
 
   CustomEase.create("osmo", "0.625, 0.05, 0, 1");
   CustomEase.create("loader", "0.65, 0.01, 0.05, 0.99");
@@ -154,8 +159,9 @@ function initPageTransitions() {
         yPercent: 110,
         duration: config.duration,
         stagger: config.stagger,
-        ease: 'expo.out'
-      }, position + "+=" + (i * 0.1));
+        ease: 'expo.out',
+        delay: i * 0.05
+      }, position);
     });
   }
 
@@ -170,6 +176,86 @@ function initPageTransitions() {
       stagger: 0.15,
       duration: 1.5,
       ease: 'loader'
+    }, position);
+  }
+
+  // Wipe IN — graphic elements grow from 0% width to their natural width.
+  function addFadeReveals(tl, next, position) {
+    const elements = next.querySelectorAll('[data-reveal-fade]');
+    if (!elements.length) return;
+
+    tl.from(elements, {
+      // xPercent: -100,
+      opacity: 0,
+      duration: 0.9,
+      stagger: 0.1,
+      ease: 'osmo',
+      clearProps: 'width'
+    }, position);
+  }
+  // Wipe IN — graphic elements grow from 0% width to their natural width.
+  function addWipeReveals(tl, next, position) {
+    const elements = next.querySelectorAll('[data-reveal-wipe]');
+    if (!elements.length) return;
+
+    tl.from(elements, {
+      // xPercent: -100,
+      width: 0,
+      duration: 0.9,
+      stagger: 0.1,
+      ease: 'osmo',
+      clearProps: 'width'
+    }, position);
+  }
+
+  // -----------------------------------------
+  // ELEMENT EXITS (leaving page, before crossfade)
+  // -----------------------------------------
+
+  // Text staggers OUT downward, masked per line.
+  function addTextExits(tl, current, position) {
+    const elements = current.querySelectorAll('[data-exit-text]');
+    if (!elements.length) return;
+
+    elements.forEach((el, i) => {
+      const type = textRevealTypeMap[el.getAttribute('data-exit-text')] || 'lines';
+      const typesToSplit =
+        type === 'lines' ? 'lines' :
+          type === 'words' ? 'lines, words' :
+            'lines, words, chars';
+      const config = textRevealConfig[type];
+
+      const split = SplitText.create(el, {
+        type: typesToSplit,
+        mask: 'lines',
+        linesClass: 'line',
+        wordsClass: 'word',
+        charsClass: 'char'
+      });
+
+      gsap.set(split.lines, { paddingBottom: '0.15em', marginBottom: '-0.15em' });
+      tl.to(split[type], {
+        yPercent: 110,
+        duration: config.duration,
+        stagger: config.stagger,
+        ease: 'expo.in'
+      }, position + "+=" + (i * 0.05));
+    });
+  }
+
+  // Wipe OUT — element width collapses to 0%.
+  function addWipeExits(tl, current, position) {
+    const elements = current.querySelectorAll('[data-exit-wipe]');
+    if (!elements.length) return;
+
+    gsap.set(elements, { clipPath: "inset(0 0 0 0)" });
+
+    tl.to(elements, {
+      clipPath: "inset(0 0 0 100%)",
+      xPercent: 50,
+      duration: 1.4,
+      stagger: 0.1,
+      ease: 'osmo'
     }, position);
   }
 
@@ -435,8 +521,11 @@ function initPageTransitions() {
     }
 
     // -----------TIMELINE---------------
-    //gsap marker: marks the start of the animation
-    tl.add("startEnter", 0);
+    // Keep the entering page hidden while the leaving page plays its exit.
+    tl.set(next, { autoAlpha: 0 }, 0);
+
+    //gsap marker: marks the start of the animation (after the exit phase)
+    tl.add("startEnter", EXIT_PHASE);
 
     tl.fromTo(next, {
       autoAlpha: 0,
@@ -452,6 +541,7 @@ function initPageTransitions() {
     addSectionReveal(tl, next, "pageReady-=0.6");
     addTextReveals(tl, next, "pageReady+=0.2");
     addElementReveals(tl, next, "pageReady+=0.2");
+    addWipeReveals(tl, next, "pageReady+=0.2");
     // ------------tl_end----------------
 
     tl.call(resetPage, [next], "pageReady=+.2");
@@ -480,10 +570,14 @@ function initPageTransitions() {
 
     // -----------TIMELINE---------------
 
+    // Exit phase: text staggers out + graphics wipe away, then fade out.
+    addTextExits(tl, current, 0);
+    addWipeExits(tl, current, 0);
+
     tl.to(current, {
       autoAlpha: 0,
       duration: .6
-    });
+    }, EXIT_PHASE);
 
     // ------------tl_end----------------
     return tl;
@@ -505,8 +599,11 @@ function initPageTransitions() {
     }
 
     // -----------TIMELINE---------------
-    //gsap marker: marks the start of the animation
-    tl.add("startEnter", 0);
+    // Keep the entering page hidden while the leaving page plays its exit.
+    tl.set(next, { autoAlpha: 0 }, 0);
+
+    //gsap marker: marks the start of the animation (after the exit phase)
+    tl.add("startEnter", EXIT_PHASE);
 
     tl.fromTo(next, {
       autoAlpha: 0,
@@ -522,6 +619,8 @@ function initPageTransitions() {
     addSectionReveal(tl, next, "pageReady+=0.05");
     addTextReveals(tl, next, "pageReady+=0.2");
     addElementReveals(tl, next, "pageReady+=0.2");
+    addWipeReveals(tl, next, "pageReady+=0.2");
+    addFadeReveals(tl, next, "pageReady+=0.2");
     // ------------tl_end----------------
 
     tl.call(resetPage, [next], "pageReady=+0.2");
