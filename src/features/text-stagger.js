@@ -1,6 +1,6 @@
 const splitConfig = {
-  lines: { duration: 0.8, stagger: 0.08 },
-  words: { duration: 0.6, stagger: 0.06 },
+  lines: { duration: 0.8, stagger: 0.05 },
+  words: { duration: 0.8, stagger: 0.05 },
   chars: { duration: 0.4, stagger: 0.01 }
 };
 
