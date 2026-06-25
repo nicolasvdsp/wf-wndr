@@ -50,7 +50,7 @@ function ensureCursorSetup() {
 
   gsap.registerPlugin(Flip);
 
-  gsap.set(cursorEl, { xPercent: -150, yPercent: -5 });
+  gsap.set(cursorEl, { xPercent: -150, yPercent: -125 });
 
   const xTo = gsap.quickTo(cursorEl, 'x', { duration: 0.6, ease: 'power4' });
   const yTo = gsap.quickTo(cursorEl, 'y', { duration: 0.6, ease: 'power4' });
