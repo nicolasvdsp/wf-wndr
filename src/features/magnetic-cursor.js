@@ -39,6 +39,37 @@ function isTouchDevice() {
     || matchMedia('(pointer: coarse)').matches;
 }
 
+// Shared pointer tracker (mirrors navbar.js). Guarded via a window flag so only
+// one listener is attached regardless of which feature initialises it first.
+function trackPointer() {
+  if (window.__wndrPointerInit) return;
+  window.__wndrPointerInit = true;
+  window.__wndrPointer = { x: -1, y: -1 };
+  window.addEventListener(
+    'mousemove',
+    (e) => {
+      window.__wndrPointer.x = e.clientX;
+      window.__wndrPointer.y = e.clientY;
+    },
+    { passive: true }
+  );
+}
+
+// True when cursor-bg is docked inside a magnetic target's holder AND the
+// pointer is still physically over that target — i.e. a Barba swap happened
+// while hovering a persistent magnetic zone (e.g. the nav). In that case we
+// must NOT yank the square back onto the dot, or it would start following the
+// mouse again under a stationary cursor (Option B).
+function pointerStillOverDock() {
+  if (!cursorBgEl || cursorBgEl.parentElement === cursorEl) return false;
+  const p = window.__wndrPointer;
+  if (!p || p.x < 0) return false;
+  const target = cursorBgEl.parentElement?.closest('[data-magnetic-cursor-target]');
+  if (!target || !target.isConnected) return false;
+  const hit = document.elementFromPoint(p.x, p.y);
+  return !!(hit && target.contains(hit));
+}
+
 function ensureCursorSetup() {
   if (isCursorSetup) return true;
 
@@ -293,6 +324,8 @@ function bindCursorLabelTargets(scope) {
 function magneticCursor() {
   if (!ensureCursorSetup()) return;
 
+  trackPointer();
+
   bindMagneticTargets(document);
   bindDisappearZones(document);
 
@@ -300,11 +333,15 @@ function magneticCursor() {
   if (hasLabel) bindCursorLabelTargets(document);
 
   document.addEventListener('barba:afterEnter', (e) => {
-    restoreCursorBg();
-    // The old page's disappear zone may have left `.cursor` faded out and is
-    // now gone with its container — its mouseleave will never fire. Force
-    // visible so the cursor doesn't get stuck invisible after navigation.
-    gsap.set(cursorEl, { autoAlpha: 1 });
+    // Option B: if the pointer is still over a persistent magnetic target after
+    // the swap, leave the square docked there. Otherwise snap it home.
+    if (!pointerStillOverDock()) {
+      restoreCursorBg();
+      // The old page's disappear zone may have left `.cursor` faded out and is
+      // now gone with its container — its mouseleave will never fire. Force
+      // visible so the cursor doesn't get stuck invisible after navigation.
+      gsap.set(cursorEl, { autoAlpha: 1 });
+    }
 
     const container = e.detail?.container || document;
     bindMagneticTargets(container);

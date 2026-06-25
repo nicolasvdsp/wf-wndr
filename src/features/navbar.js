@@ -63,9 +63,29 @@ const INIT_FLAG = 'navInit';
 const DURATION = 0.4;
 const EASE = 'expo.out';
 
+// Shared pointer tracker. After a Barba swap, no mouseenter/leave fires for the
+// element already under the cursor, so features need a way to ask "is the mouse
+// still over me?". Guarded via a window flag so only one listener is attached
+// even when several features import this helper.
+function trackPointer() {
+  if (window.__wndrPointerInit) return;
+  window.__wndrPointerInit = true;
+  window.__wndrPointer = { x: -1, y: -1 };
+  window.addEventListener(
+    'mousemove',
+    (e) => {
+      window.__wndrPointer.x = e.clientX;
+      window.__wndrPointer.y = e.clientY;
+    },
+    { passive: true }
+  );
+}
+
 function initNavbar() {
   const nav = document.querySelector(SELECTORS.nav);
   if (!nav) return;
+
+  trackPointer();
 
   // Idempotent re-runs (e.g. on barba:afterEnter) → just re-sync state
   if (nav.dataset[INIT_FLAG] !== undefined) {
@@ -198,10 +218,38 @@ function initNavbar() {
 
   // ---- Full re-sync (initial load + every barba:afterEnter) --------------
 
+  function pointerOver(el) {
+    const p = window.__wndrPointer;
+    if (!p || p.x < 0) return false;
+    const hit = document.elementFromPoint(p.x, p.y);
+    return !!(hit && el.contains(hit));
+  }
+
+  function linkUnderPointer() {
+    const p = window.__wndrPointer;
+    if (!p || p.x < 0) return null;
+    const hit = document.elementFromPoint(p.x, p.y);
+    return hit ? hit.closest(SELECTORS.link) : null;
+  }
+
   function sync() {
     currentLink = findCurrentLink();
     syncAriaCurrent(currentLink);
-    // If user happens to be mid-hover during a page change, snap to new current
+
+    // After a page change no mouseenter/leave fires for whatever is already
+    // under the cursor. If the pointer is still physically inside the menu,
+    // preserve the hovered/indented state instead of snapping back — otherwise
+    // the links would un-indent under a stationary cursor (Option B). If the
+    // user moved out of the zone during the transition, the persistent
+    // mouseleave listener already fired and this branch is skipped.
+    if (supportsHover && pointerOver(menu)) {
+      hoveredLink = linkUnderPointer() || currentLink;
+      isMenuActive = true;
+      menu.classList.add(HOVER_CLASS);
+      moveIndicatorTo(hoveredLink, { animate: false });
+      return;
+    }
+
     isMenuActive = false;
     hoveredLink = null;
     menu.classList.remove(HOVER_CLASS);
@@ -241,6 +289,21 @@ function initNavbar() {
     // Only deactivate when focus truly leaves the nav
     if (e.relatedTarget && nav.contains(e.relatedTarget)) return;
     deactivateMenu();
+  });
+
+  // Optimistically treat a clicked link as the new current page right away.
+  // Without this, leaving the menu mid-transition makes `deactivateMenu()`
+  // slide the indicator back to the OUTGOING page's link (`.w--current` only
+  // updates once Barba finishes). Barba's `afterEnter` re-syncs from the real
+  // `.w--current` afterwards, so this is just a head start. Skip modified /
+  // new-tab clicks, which don't navigate the current page.
+  links.forEach((link) => {
+    link.addEventListener('click', (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      currentLink = link;
+      hoveredLink = link;
+      syncAriaCurrent(link);
+    });
   });
 
   // Pre-emptive fade: when the user clicks any element marked with
