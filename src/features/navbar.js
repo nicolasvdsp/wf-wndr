@@ -63,6 +63,18 @@ const INIT_FLAG = 'navInit';
 const DURATION = 0.4;
 const EASE = 'expo.out';
 
+// Logo hero ↔ compact sizing. The `.is-large` combo class holds the actual
+// width values in Webflow; JS only toggles it. Hysteresis: shrink once scrolled
+// past SHRINK_AFTER, only grow back below GROW_BELOW — the gap prevents a
+// single-pixel boundary where the size flickers back and forth.
+const LOGO_LARGE_CLASS = 'is-large';
+// Added only when navigating TO the homepage, so the grow can wait out the page
+// transition (the actual `transition-delay` lives on `.has-delay` in Webflow).
+// Stripped on scroll-driven resizes so those stay immediate.
+const LOGO_DELAY_CLASS = 'has-delay';
+const LOGO_SHRINK_AFTER = 16 * 10;
+const LOGO_GROW_BELOW = 16 * 8;
+
 // Shared pointer tracker. After a Barba swap, no mouseenter/leave fires for the
 // element already under the cursor, so features need a way to ask "is the mouse
 // still over me?". Guarded via a window flag so only one listener is attached
@@ -97,6 +109,7 @@ function initNavbar() {
   const menu = nav.querySelector(SELECTORS.menu);
   const indicator = nav.querySelector(SELECTORS.indicator);
   const links = Array.from(nav.querySelectorAll(SELECTORS.link));
+  const logo = nav.querySelector(SELECTORS.logo);
   if (!menu || !indicator || !links.length) return;
 
   const reduceMotionMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -110,6 +123,7 @@ function initNavbar() {
   let hoveredLink = null;
   let isMenuActive = false;
   let leaveTween = null;
+  let logoAtTop = window.scrollY <= LOGO_SHRINK_AFTER;
 
   // ---- Active-state helpers ----------------------------------------------
 
@@ -133,6 +147,42 @@ function initNavbar() {
       if (link === current) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
+  }
+
+  // ---- Logo size (homepage hero ↔ compact) -------------------------------
+
+  function isHomePath(path) {
+    return normalizePath(path) === '/';
+  }
+
+  // Large only on the homepage AND while near the top (per `logoAtTop`).
+  function applyLogoSize() {
+    if (!logo) return;
+    logo.classList.toggle(LOGO_LARGE_CLASS, isHomePath(window.location.pathname) && logoAtTop);
+  }
+
+  // Optimistic size for a click that's about to navigate: decide from the
+  // destination path (the URL hasn't changed yet) so the logo animates the
+  // instant you click, in parallel with the page transition. Navigation always
+  // lands at the top, so reset `logoAtTop` too.
+  function setLogoForDestination(destPath) {
+    if (!logo) return;
+    const home = isHomePath(destPath);
+    logoAtTop = true;
+    // Delay only the grow into the homepage; shrinking away from it is immediate.
+    logo.classList.toggle(LOGO_DELAY_CLASS, home);
+    logo.classList.toggle(LOGO_LARGE_CLASS, home);
+  }
+
+  function onLogoScroll() {
+    const y = window.scrollY;
+    let changed = false;
+    if (logoAtTop && y > LOGO_SHRINK_AFTER) { logoAtTop = false; changed = true; }
+    else if (!logoAtTop && y < LOGO_GROW_BELOW) { logoAtTop = true; changed = true; }
+    if (changed) {
+      if (logo) logo.classList.remove(LOGO_DELAY_CLASS); // scroll resizes are immediate
+      applyLogoSize();
+    }
   }
 
   // ---- Indicator placement ------------------------------------------------
@@ -236,6 +286,10 @@ function initNavbar() {
     currentLink = findCurrentLink();
     syncAriaCurrent(currentLink);
 
+    // Recompute logo size for the new page (scroll resets to top on navigation).
+    logoAtTop = window.scrollY <= LOGO_SHRINK_AFTER;
+    applyLogoSize();
+
     // After a page change no mouseenter/leave fires for whatever is already
     // under the cursor. If the pointer is still physically inside the menu,
     // preserve the hovered/indented state instead of snapping back — otherwise
@@ -303,6 +357,7 @@ function initNavbar() {
       currentLink = link;
       hoveredLink = link;
       syncAriaCurrent(link);
+      setLogoForDestination(new URL(link.href, window.location.origin).pathname);
     });
   });
 
@@ -316,7 +371,16 @@ function initNavbar() {
     const trigger = e.target.closest('[data-nav-remove-indicator]');
     if (!trigger) return;
     moveIndicatorTo(null);
+    // The logo navigates to "/", so grow it immediately (it lands at the top).
+    if (trigger.href) setLogoForDestination(new URL(trigger.href, window.location.origin).pathname);
   });
+
+  // Logo size on scroll (hysteresis lives in `onLogoScroll`), rAF-throttled.
+  let logoScrollRaf = 0;
+  window.addEventListener('scroll', () => {
+    cancelAnimationFrame(logoScrollRaf);
+    logoScrollRaf = requestAnimationFrame(onLogoScroll);
+  }, { passive: true });
 
   // Recompute on resize (debounced via rAF)
   let resizeRaf = 0;
