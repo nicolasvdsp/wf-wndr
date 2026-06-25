@@ -272,7 +272,7 @@ function bindCursorLabelTargets(scope) {
 
       labelLeaveTween = gsap.to(labelTextEl, {
         autoAlpha: 0,
-        duration: 0.2,
+        duration: 0.05,
         ease: 'power2.out',
         overwrite: 'auto',
         onComplete: () => {
