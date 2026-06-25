@@ -191,7 +191,7 @@ function initFooterParallax(container) {
 }
 
 function parallax() {
-  document.addEventListener("barba:pageVisible", (e) => {
+  document.addEventListener("barba:afterEnter", (e) => {
     initStackingCardsParallax(e.detail.container);
     initGlobalParallax(e.detail.container);
     initSkew(e.detail.container);
