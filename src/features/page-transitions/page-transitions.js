@@ -839,6 +839,16 @@ function initPageTransitions() {
       ? data.current?.container
       : null;
 
+    // Freeze scroll-driven (scrubbed) animations on the leaving page BEFORE we
+    // reset the scroll position below.
+    if (hasScrollTrigger && leavingContainer) {
+      ScrollTrigger.getAll().forEach(st => {
+        if (st.trigger && leavingContainer.contains(st.trigger)) {
+          st.disable(false);
+        }
+      });
+    }
+
     // Pin old container at its current visual position
     if (leavingContainer) {
       const oldTop = leavingContainer.getBoundingClientRect().top;
