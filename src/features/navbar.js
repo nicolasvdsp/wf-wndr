@@ -63,15 +63,37 @@ const INIT_FLAG = 'navInit';
 const DURATION = 0.4;
 const EASE = 'expo.out';
 
-// Logo hero ↔ compact sizing. The `.is-large` combo class holds the actual
-// width values in Webflow; JS only toggles it. Hysteresis: shrink once scrolled
-// past SHRINK_AFTER, only grow back below GROW_BELOW — the gap prevents a
-// single-pixel boundary where the size flickers back and forth.
+// Logo hero ↔ compact sizing.
+//
+// Two scroll modes (choose per-site):
+//   'instant'     → the logo snaps between two widths. The `.is-large` combo
+//                   class holds the width values in Webflow; JS just toggles it
+//                   with hysteresis (shrink past SHRINK_AFTER, grow back below
+//                   GROW_BELOW — the gap prevents single-pixel flicker).
+//   'progressive' → the scroll position scrubs the width between the two
+//                   extremes (largest at scrollY 0, smallest at DISTANCE). JS
+//                   writes a 0→1 `--logo-progress` var; the calc width lives in
+//                   `_navbar.scss`. No `.is-large` in this mode.
+//
+// Pick the default here, or override per page via `data-logo-scroll="progressive"`
+// (or `"instant"`) on the `[data-nav]` element in Webflow. Page-change sizing is
+// identical in both modes (animated grow into / shrink out of the homepage).
+const LOGO_SCROLL_MODE = 'progressive';
+// Progressive only: scroll distance (px) from largest → smallest. ~100vh.
+const LOGO_PROGRESS_DISTANCE = () => window.innerHeight;
+
 const LOGO_LARGE_CLASS = 'is-large';
 // Added only when navigating TO the homepage, so the grow can wait out the page
 // transition (the actual `transition-delay` lives on `.has-delay` in Webflow).
 // Stripped on scroll-driven resizes so those stay immediate.
 const LOGO_DELAY_CLASS = 'has-delay';
+// Progressive only: enables the width tween for a page-change resize (default in
+// that mode is no transition so scroll scrubbing tracks 1:1). Stripped on scroll.
+const LOGO_ANIMATING_CLASS = 'is-animating';
+// Progressive only: fallback release for the page-change scroll lock, in case no
+// width `transitionend` fires (e.g. the size didn't actually change). Should
+// comfortably exceed the tween duration + any `.has-delay`.
+const LOGO_PAGECHANGE_MAX_MS = 1500;
 const LOGO_SHRINK_AFTER = 16 * 10;
 const LOGO_GROW_BELOW = 16 * 8;
 
@@ -112,6 +134,12 @@ function initNavbar() {
   const logo = nav.querySelector(SELECTORS.logo);
   if (!menu || !indicator || !links.length) return;
 
+  // Resolve the logo scroll mode (Webflow attribute wins over the JS default),
+  // then reflect it back onto the nav so the SCSS selectors can hook onto it.
+  const logoScrollMode = nav.getAttribute('data-logo-scroll') || LOGO_SCROLL_MODE;
+  const logoProgressive = logoScrollMode === 'progressive';
+  nav.setAttribute('data-logo-scroll', logoScrollMode);
+
   const reduceMotionMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
   const hoverableMQ = window.matchMedia('(hover: hover) and (pointer: fine)');
 
@@ -124,6 +152,10 @@ function initNavbar() {
   let isMenuActive = false;
   let leaveTween = null;
   let logoAtTop = window.scrollY <= LOGO_SHRINK_AFTER;
+  // Progressive: while a page-change tween runs, ignore scroll-driven updates so
+  // Barba's scroll-to-top reset can't strip `.is-animating` and snap the width.
+  let logoLocked = false;
+  let logoLockTimer = 0;
 
   // ---- Active-state helpers ----------------------------------------------
 
@@ -155,10 +187,51 @@ function initNavbar() {
     return normalizePath(path) === '/';
   }
 
-  // Large only on the homepage AND while near the top (per `logoAtTop`).
+  // Progressive: 0 (largest, scrollY 0) → 1 (smallest, at DISTANCE).
+  function progressFromScroll() {
+    const range = LOGO_PROGRESS_DISTANCE();
+    if (!range || range <= 0) return 0;
+    return Math.min(1, Math.max(0, window.scrollY / range));
+  }
+
+  function setLogoProgress(p) {
+    if (logo) logo.style.setProperty('--logo-progress', String(p));
+  }
+
+  // Lock scroll-driven updates while a page-change tween plays (progressive),
+  // so Barba's scroll reset can't interrupt it. Released on the width
+  // `transitionend`, with a timeout fallback for no-op resizes.
+  function lockLogoScroll() {
+    logoLocked = true;
+    clearTimeout(logoLockTimer);
+    logoLockTimer = setTimeout(releaseLogoScroll, LOGO_PAGECHANGE_MAX_MS);
+  }
+
+  function releaseLogoScroll() {
+    if (!logoLocked) return;
+    logoLocked = false;
+    clearTimeout(logoLockTimer);
+    if (logo) logo.classList.remove(LOGO_ANIMATING_CLASS, LOGO_DELAY_CLASS);
+    // Resume scrubbing from the real scroll position.
+    if (logoProgressive && isHomePath(window.location.pathname)) {
+      setLogoProgress(progressFromScroll());
+    }
+  }
+
+  // Recompute the logo size from the current scroll position + path. Used on
+  // initial load and every barba:afterEnter.
   function applyLogoSize() {
     if (!logo) return;
-    logo.classList.toggle(LOGO_LARGE_CLASS, isHomePath(window.location.pathname) && logoAtTop);
+    const home = isHomePath(window.location.pathname);
+    if (logoProgressive) {
+      // Mid page-change: leave the destination target the click already set.
+      if (logoLocked) return;
+      // Non-home → pinned to smallest; home → scrubbed by scroll.
+      setLogoProgress(home ? progressFromScroll() : 1);
+      return;
+    }
+    logoAtTop = window.scrollY <= LOGO_SHRINK_AFTER;
+    logo.classList.toggle(LOGO_LARGE_CLASS, home && logoAtTop);
   }
 
   // Optimistic size for a click that's about to navigate: decide from the
@@ -171,17 +244,33 @@ function initNavbar() {
     logoAtTop = true;
     // Delay only the grow into the homepage; shrinking away from it is immediate.
     logo.classList.toggle(LOGO_DELAY_CLASS, home);
-    logo.classList.toggle(LOGO_LARGE_CLASS, home);
+    if (logoProgressive) {
+      // Enable the tween for this discrete (non-scroll) change, then scrub.
+      // Lock so the impending scroll-to-top reset can't snap it mid-tween.
+      logo.classList.add(LOGO_ANIMATING_CLASS);
+      setLogoProgress(home ? 0 : 1);
+      lockLogoScroll();
+    } else {
+      logo.classList.toggle(LOGO_LARGE_CLASS, home);
+    }
   }
 
   function onLogoScroll() {
+    if (logoLocked) return; // page-change tween in progress
+    if (logoProgressive) {
+      // Scroll resizes track 1:1 with no tween — drop the page-change classes.
+      if (logo) logo.classList.remove(LOGO_ANIMATING_CLASS, LOGO_DELAY_CLASS);
+      // Only the homepage scrubs; other pages stay pinned to smallest.
+      if (isHomePath(window.location.pathname)) setLogoProgress(progressFromScroll());
+      return;
+    }
     const y = window.scrollY;
     let changed = false;
     if (logoAtTop && y > LOGO_SHRINK_AFTER) { logoAtTop = false; changed = true; }
     else if (!logoAtTop && y < LOGO_GROW_BELOW) { logoAtTop = true; changed = true; }
     if (changed) {
       if (logo) logo.classList.remove(LOGO_DELAY_CLASS); // scroll resizes are immediate
-      applyLogoSize();
+      logo.classList.toggle(LOGO_LARGE_CLASS, isHomePath(window.location.pathname) && logoAtTop);
     }
   }
 
@@ -287,7 +376,6 @@ function initNavbar() {
     syncAriaCurrent(currentLink);
 
     // Recompute logo size for the new page (scroll resets to top on navigation).
-    logoAtTop = window.scrollY <= LOGO_SHRINK_AFTER;
     applyLogoSize();
 
     // After a page change no mouseenter/leave fires for whatever is already
@@ -382,6 +470,13 @@ function initNavbar() {
     logoScrollRaf = requestAnimationFrame(onLogoScroll);
   }, { passive: true });
 
+  // Release the page-change scroll lock once the width tween finishes.
+  if (logo) {
+    logo.addEventListener('transitionend', (e) => {
+      if (e.propertyName === 'width' && logoLocked) releaseLogoScroll();
+    });
+  }
+
   // Recompute on resize (debounced via rAF)
   let resizeRaf = 0;
   window.addEventListener('resize', () => {
@@ -389,6 +484,10 @@ function initNavbar() {
     resizeRaf = requestAnimationFrame(() => {
       const target = isMenuActive ? (hoveredLink || currentLink) : currentLink;
       moveIndicatorTo(target, { animate: false });
+      // Progressive logo scrub depends on viewport height → re-derive progress.
+      if (logoProgressive && isHomePath(window.location.pathname)) {
+        setLogoProgress(progressFromScroll());
+      }
     });
   });
 
