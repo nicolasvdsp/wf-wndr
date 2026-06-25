@@ -67,8 +67,51 @@ whether the root element is `.nav`, `.nav_component`, or anything else.
   will-change: transform, opacity;
 }
 
+[data-nav-logo] {
+  // INSTANT mode: the width values live on the `.is-large` combo class in the
+  // Webflow Designer; JS only toggles that class (homepage + near top = large).
+  // We own the tween here so the resize animates whether triggered by scroll,
+  // click, or a page change.
+  transition: width 0.4s var(--easing, cubic-bezier(0.16, 1, 0.3, 1));
+
+  // PROGRESSIVE mode: the two width extremes. Tunable — override in Webflow or
+  // here. `--logo-size-large` = at scrollY 0, `--logo-size-small` = at DISTANCE.
+  --logo-size-large: 50%;
+  --logo-size-small: max(21%, 20rem);
+}
+
+// PROGRESSIVE mode: scroll position scrubs the width via `--logo-progress`
+// (0 → 1) written by the JS. `data-logo-scroll="progressive"` is reflected onto
+// the nav by the JS (from the Webflow attribute or the JS default). No tween by
+// default so the width tracks scroll 1:1; the JS adds `.is-animating` only for
+// the discrete grow/shrink that happens on a page change.
+[data-logo-scroll="progressive"] [data-nav-logo] {
+  // `!important` so the scrubbed width beats Webflow's class-based widths
+  // (`.nav_logo-link`, and especially `.w--current` which is present on the
+  // homepage and would otherwise tie on specificity and win by source order).
+  width: calc(
+    var(--logo-size-large) +
+    (var(--logo-size-small) - var(--logo-size-large)) * var(--logo-progress, 0)
+  ) !important;
+  transition: none;
+}
+
+// Page-change resize: enable the tween (longhand so `.has-delay` can add its
+// own `transition-delay` without the shorthand resetting it back to 0).
+[data-logo-scroll="progressive"] [data-nav-logo].is-animating {
+  transition-property: width;
+  transition-duration: 0.4s;
+  transition-timing-function: var(--easing, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+[data-logo-scroll="progressive"] [data-nav-logo].is-animating.has-delay {
+  transition-delay: var(--logo-delay, 0.4s);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  [data-nav-link] {
+  [data-nav-link],
+  [data-nav-logo],
+  [data-logo-scroll="progressive"] [data-nav-logo].is-animating {
     transition: none;
   }
 }
