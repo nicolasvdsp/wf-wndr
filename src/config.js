@@ -32,7 +32,7 @@ export const INCLUDE_FEATURES = {
   testimonials: false,
   richtextFeatures: false,
   lucideIcons: false,
-  bunnyBackground: false,
+  bunnyBackground: true,
   bunnyLightbox: false,
   hubspot: false,
   pushmotionMarquee: false,
