@@ -492,9 +492,60 @@ function initPageTransitions() {
     return Promise.resolve();
   }
 
+  // Simple preloader: white cover is visible from first paint (CSS), then fades
+  // out once the background video reports ready — or immediately if there is no
+  // video on the page.
+  function preloaderSimple(next) {
+    const wrap = document.querySelector("[data-load-wrap]");
+    if (!wrap || reducedMotion) return skipPreloader(next);
+
+    // Kick off page + feature init (this is what starts the bunny video loading)
+    dispatchPageVisible(next);
+    resetPage(next);
+
+    let done = false;
+    const reveal = () => {
+      if (done) return;
+      done = true;
+      gsap.to(wrap, {
+        autoAlpha: 0,
+        duration: 0.6,
+        delay: 0.15,
+        onComplete: () => gsap.set(wrap, { display: "none" }),
+      });
+    };
+
+    const bunny = document.querySelector("[data-bunny-background-init]");
+
+    if (!bunny) {
+      // No background video on this page → fade out now
+      reveal();
+    } else if (bunny.getAttribute("data-player-status") === "ready") {
+      reveal();
+    } else {
+      const obs = new MutationObserver(() => {
+        if (bunny.getAttribute("data-player-status") === "ready") {
+          obs.disconnect();
+          reveal();
+        }
+      });
+      obs.observe(bunny, {
+        attributes: true,
+        attributeFilter: ["data-player-status"],
+      });
+      // Safety net: never trap the user behind white if the video stalls/errors
+      setTimeout(() => {
+        obs.disconnect();
+        reveal();
+      }, 6000);
+    }
+
+    return Promise.resolve();
+  }
+
   function runPreloader(next) {
     if (!PRELOADER_ENABLED) return skipPreloader(next);
-    return preloaderWndr(next);
+    return preloaderSimple(next);
   }
 
   function runPageEnterSelf(next) {
