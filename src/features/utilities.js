@@ -184,6 +184,160 @@ function initListCombine(container) {
 }
 
 
+// Generic list injection: stamp clones of an item into a list at 1-based
+// positions defined by one or more CMS-bound text values.
+//
+//   <div data-inject-list>                     (or: data-inject-list="myKey")
+//     …existing items…
+//   </div>
+//
+//   <div data-inject-item                      (or: data-inject-item="myKey")
+//        data-inject-value-sources="3 https://…/a.m3u8
+//                                   5 https://…/b.m3u8"
+//        data-inject-attribute-sources="data-player-src">
+//     …stamp contents. May contain a descendant that already carries the
+//     target attribute (e.g. <div data-bunny-background-init data-player-src>).
+//   </div>
+//
+// For each `data-inject-value-KEY` attribute on the item, the paired
+// `data-inject-attribute-KEY` names the attribute to write the value to on
+// the clone — or on any descendant that already carries that attribute.
+//
+// Values are parsed line-by-line as `<position> <value>`. Positions across
+// keys are unioned; one clone is inserted per position. `3` becomes the third
+// child of the list; the item that was there shifts forward.
+//
+// The stamp is detached before insertion, so it never occupies a `:nth-child`
+// slot and never boots child components (e.g. a hidden bunny player). It may
+// live inside the list in the Designer.
+const INJECT_VALUE_PREFIX = 'data-inject-value-';
+const INJECT_ATTR_PREFIX = 'data-inject-attribute-';
+
+function parsePositionedLines(raw) {
+  const map = new Map();
+  raw.split(/\r?\n/).forEach(line => {
+    const match = line.trim().match(/^(\d+)\s+(.+)$/);
+    if (!match) return;
+    const position = parseInt(match[1], 10);
+    if (position < 1 || map.has(position)) return;
+    map.set(position, match[2].trim());
+  });
+  return map;
+}
+
+function readInjectSpecs(item) {
+  const specs = new Map();
+  Array.from(item.attributes).forEach(attr => {
+    if (!attr.name.startsWith(INJECT_VALUE_PREFIX)) return;
+    const key = attr.name.slice(INJECT_VALUE_PREFIX.length);
+    const attribute = item.getAttribute(INJECT_ATTR_PREFIX + key);
+    if (!attribute) return;
+    const values = parsePositionedLines(attr.value || '');
+    if (values.size === 0) return;
+    specs.set(key, { attribute, values });
+  });
+  return specs;
+}
+
+function findInjectList(item) {
+  const name = item.getAttribute('data-inject-item') || '';
+  const doc = item.ownerDocument || document;
+
+  if (name) {
+    const list = doc.querySelector(
+      '[data-inject-list="' + CSS.escape(name) + '"]',
+    );
+    if (list) return list;
+  }
+
+  // Walk up ancestors; at each level check the ancestor itself and its
+  // descendants (but not the stamp's own subtree). First match wins so the
+  // nearest common wrapper is preferred. This handles both stamp-inside-list
+  // and stamp-as-sibling-of-a-wrapper (e.g. Webflow's `.w-dyn-list` around
+  // the actual `[data-inject-list]` on `.w-dyn-items`).
+  let anc = item.parentElement;
+  while (anc) {
+    if (anc.matches && anc.matches('[data-inject-list]')) return anc;
+    const nested = [...anc.querySelectorAll('[data-inject-list]')].find(
+      (el) => !item.contains(el),
+    );
+    if (nested) return nested;
+    anc = anc.parentElement;
+  }
+
+  return null;
+}
+
+function writeInjectedValue(clone, attribute, value) {
+  const selector = '[' + attribute + ']';
+  const targets = clone.querySelectorAll(selector);
+  if (targets.length) {
+    targets.forEach(el => el.setAttribute(attribute, value));
+    return;
+  }
+  clone.setAttribute(attribute, value);
+}
+
+function prepareInjectedClone(clone) {
+  clone.removeAttribute('data-inject-item');
+  clone.removeAttribute('data-inject-done');
+  clone.removeAttribute('id');
+  clone.removeAttribute('hidden');
+  clone.removeAttribute('aria-hidden');
+  clone.classList.remove('w-condition-invisible');
+  if (clone.style.display === 'none') clone.style.removeProperty('display');
+
+  clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+
+  // Strip inject metadata so the clone is a clean stamped instance.
+  Array.from(clone.attributes).forEach(attr => {
+    if (
+      attr.name.startsWith(INJECT_VALUE_PREFIX) ||
+      attr.name.startsWith(INJECT_ATTR_PREFIX)
+    ) {
+      clone.removeAttribute(attr.name);
+    }
+  });
+}
+
+function initInject(container) {
+  container = container || document;
+
+  container.querySelectorAll('[data-inject-item]').forEach(item => {
+    if (item.hasAttribute('data-inject-done')) return;
+
+    const list = findInjectList(item);
+    if (!list) return;
+
+    const specs = readInjectSpecs(item);
+
+    // Commit only once we know we can process this stamp. Otherwise a run that
+    // ran too early (list not yet in the DOM) would poison the retry.
+    item.setAttribute('data-inject-done', '');
+
+    // Detach the stamp so it never occupies a :nth-child slot and never boots
+    // child components (e.g. a hidden bunny video).
+    item.remove();
+
+    if (!specs.size) return;
+
+    const positions = new Set();
+    specs.forEach(spec => spec.values.forEach((_, pos) => positions.add(pos)));
+
+    [...positions].sort((a, b) => a - b).forEach(position => {
+      const clone = item.cloneNode(true);
+      prepareInjectedClone(clone);
+      specs.forEach(spec => {
+        const value = spec.values.get(position);
+        if (value == null) return;
+        writeInjectedValue(clone, spec.attribute, value);
+      });
+      list.insertBefore(clone, list.children[position - 1] || null);
+    });
+  });
+}
+
+
 function initSearchBar(container) {
   container = container || document;
 
@@ -206,12 +360,22 @@ function initSearchBar(container) {
 
 
 function utilities() {
+  // Before the enter animation, so injected clones are already in place when
+  // the page is shown. First load misses this (barba.init runs earlier) and
+  // is handled on pageVisible, while the preloader cover is still up.
+  if (typeof barba !== 'undefined') {
+    barba.hooks.beforeEnter((data) => {
+      initInject(data.next?.container || document);
+    });
+  }
+
   document.addEventListener('barba:pageVisible', (e) => {
     initDynamicCurrentYear(e.detail.container);
     initQuoteText(e.detail.container);
     initFilterDropdowns(e.detail.container);
     initCappedListStagger(e.detail.container);
     initListCombine(e.detail.container);
+    initInject(e.detail.container);
     initSearchBar(e.detail.container);
   });
 }
