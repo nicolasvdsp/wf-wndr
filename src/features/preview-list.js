@@ -14,7 +14,7 @@ function initPreviewFollower(container) {
     let firstEntry = true;
 
     const offset = 100; // The animation distance in %
-    const duration = 0.5; // The animation duration of all visual transforms
+    const duration = 0; // The animation duration of all visual transforms
     const ease = 'power2.inOut';
 
     // Initialize follower position
