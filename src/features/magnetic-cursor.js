@@ -39,6 +39,15 @@ function isTouchDevice() {
     || matchMedia('(pointer: coarse)').matches;
 }
 
+// Stricter check: coarse-pointer AND no fine-pointer anywhere. Keeps the
+// magnetic cursor enabled on touchscreen laptops / 2-in-1s where a mouse or
+// trackpad is also present, and only disables it on pure-touch devices
+// (phones, tablets without a paired mouse).
+function isPureTouchDevice() {
+  return matchMedia('(pointer: coarse)').matches
+    && !matchMedia('(any-pointer: fine)').matches;
+}
+
 // Shared pointer tracker (mirrors navbar.js). Guarded via a window flag so only
 // one listener is attached regardless of which feature initialises it first.
 function trackPointer() {
@@ -322,6 +331,16 @@ function bindCursorLabelTargets(scope) {
 }
 
 function magneticCursor() {
+  // Pure-touch devices (phones, tablets without a mouse): hide the follower +
+  // label markup and bail before any listeners are attached. Hybrid devices
+  // with both touch AND a mouse/trackpad keep the magnetic cursor.
+  if (isPureTouchDevice()) {
+    document.querySelectorAll('.cursor, [data-label]').forEach((el) => {
+      el.style.display = 'none';
+    });
+    return;
+  }
+
   if (!ensureCursorSetup()) return;
 
   trackPointer();
